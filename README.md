@@ -1,5 +1,7 @@
 # 🚀 Advanced Qoder Reset Tool
 
+> **🌐 Language**: [Русский](README_RUS.md) | **English**
+
 A comprehensive command-line tool for resetting Qoder application identity information with advanced anti-detection features and automatic backup system.
 
 ## 📢 Connect with Us
@@ -54,7 +56,7 @@ A comprehensive command-line tool for resetting Qoder application identity infor
 
 - **Operating System**: Windows 10+, macOS 12+, or Linux
 - **Python**: 3.6 or higher
-- **Dependencies**: `psutil`
+- **Dependencies**: `psutil`, `rich`
 - **Disk Space**: At least 100MB free space
 - **Permissions**: 
   - Windows: Read/write access to `%APPDATA%\Qoder`
@@ -63,7 +65,33 @@ A comprehensive command-line tool for resetting Qoder application identity infor
 
 ## 📦 Quick Installation
 
-### Method 1: Direct Execution (Recommended)
+### Method 1: Automatic Installation (Recommended)
+
+```bash
+# Using requirements.txt
+pip install -r requirements.txt
+python main.py
+```
+
+### Method 2: Platform-Specific Installers
+
+**Windows:**
+```cmd
+install.bat
+```
+
+**macOS/Linux:**
+```bash
+chmod +x install.sh
+./install.sh
+```
+
+**Python Installer:**
+```bash
+python install.py
+```
+
+### Method 3: Manual Installation
 
 ```bash
 # 1. Clone or download the repository
@@ -71,17 +99,17 @@ git clone <repository-url>
 cd qoder-reset
 
 # 2. Install dependencies
-pip install psutil
+pip install psutil rich
 
 # 3. Run the tool
 python main.py
 ```
 
-### Method 2: One-Command Setup
+### Method 4: One-Command Setup
 
 ```bash
 # Install and run in one go
-pip install psutil && python main.py
+pip install psutil rich && python main.py
 ```
 
 ## 🚀 Usage Guide
@@ -149,6 +177,7 @@ The tool implements a comprehensive 7-stage reset process:
 ### Core Technologies
 
 - **Process Detection**: Cross-platform process monitoring with `psutil`
+- **Rich Interface**: Beautiful CLI with colors, tables, and progress bars using `rich`
 - **File Operations**: Safe file handling with `pathlib` and `shutil`
 - **JSON Processing**: Configuration file manipulation with built-in `json` module
 - **UUID Generation**: Cryptographically secure identifiers with `uuid.uuid4()`
@@ -363,11 +392,14 @@ chmod -R u+rw ~/Library/Application\ Support/Qoder/
 
 #### 4. **Python Dependencies Missing**
 ```bash
-# Install required packages
-pip install psutil
+# Install all required packages
+pip install -r requirements.txt
+
+# Or install manually
+pip install psutil rich
 
 # Verify installation  
-python -c "import psutil; print('psutil available')"
+python -c "import psutil, rich; print('All dependencies available')"
 ```
 
 ### Log Analysis
@@ -419,7 +451,15 @@ The tool provides detailed logging for troubleshooting:
 
 ## 📝 Version History
 
-### v2.0.0 - Advanced Anti-Detection (Current)
+### v2.1.0 - Enhanced User Interface (Current)
+- 🎨 **Beautiful Rich Interface** with colorful CLI, tables, and progress bars
+- 📦 **Multiple Installation Methods** including automatic installers for all platforms
+- 📄 **Enhanced Documentation** with cross-language links and updated dependencies
+- 🔗 **Social Integration** with Telegram channels and GitHub links in interface
+- 🛠️ **Installation Scripts** for Windows (.bat), Unix (.sh), and Python (.py)
+- 📝 **Requirements Management** with requirements.txt and .gitignore
+
+### v2.0.0 - Advanced Anti-Detection
 - ⚡ **Complete 7-stage reset process** with all advanced features
 - 🛡️ **Hardware fingerprint reset** with system-specific fake hardware generation
 - 🔐 **Login identity cleanup** with selective authentication data removal
