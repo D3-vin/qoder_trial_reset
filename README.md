@@ -449,31 +449,6 @@ The tool provides detailed logging for troubleshooting:
 - **📁 Workspaces**: All workspace data remains intact
 - **🔑 Identity Only**: Only tracking and identity data is reset
 
-## 📝 Version History
-
-### v2.1.0 - Enhanced User Interface (Current)
-- 🎨 **Beautiful Rich Interface** with colorful CLI, tables, and progress bars
-- 📦 **Multiple Installation Methods** including automatic installers for all platforms
-- 📄 **Enhanced Documentation** with cross-language links and updated dependencies
-- 🔗 **Social Integration** with Telegram channels and GitHub links in interface
-- 🛠️ **Installation Scripts** for Windows (.bat), Unix (.sh), and Python (.py)
-- 📝 **Requirements Management** with requirements.txt and .gitignore
-
-### v2.0.0 - Advanced Anti-Detection
-- ⚡ **Complete 7-stage reset process** with all advanced features
-- 🛡️ **Hardware fingerprint reset** with system-specific fake hardware generation
-- 🔐 **Login identity cleanup** with selective authentication data removal
-- 💾 **Enhanced backup system** with timestamped backups and metadata preservation
-- 📊 **Advanced telemetry reset** with 15+ identifier updates
-- 🧹 **Comprehensive cache cleanup** covering 15+ cache directories
-- 💬 **Smart conversation management** with automatic data preservation
-- 🌍 **Cross-platform support** for Windows, macOS, and Linux
-
-### v1.x.x - Basic Versions
-- Basic machine ID and telemetry reset
-- Simple file operations
-- Limited backup functionality
-
 ## 📄 License
 
 This project is for educational and research purposes only. Please comply with relevant laws and software usage agreements.

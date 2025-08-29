@@ -1,13 +1,15 @@
 import json
 import uuid
 import hashlib
+import os
 from pathlib import Path
 import psutil
 import sys
 import shutil
-from datetime import datetime
+from datetime import datetime, timedelta
 import platform
 import random
+import signal
 
 # Rich imports for beautiful UI
 from rich.console import Console
@@ -53,7 +55,7 @@ class QoderStatusChecker:
             self.console.print(message, style=style)
     
     def create_backup(self, file_path):
-        """Create backup of a file with timestamp"""
+        """Create backup of a file or directory with timestamp"""
         try:
             file_path = Path(file_path)
             if not file_path.exists():
@@ -64,11 +66,19 @@ class QoderStatusChecker:
             backup_dir = file_path.parent / "backup"
             backup_dir.mkdir(exist_ok=True)
             
-            backup_filename = f"{file_path.stem}_{timestamp}{file_path.suffix}"
-            backup_path = backup_dir / backup_filename
+            if file_path.is_dir():
+                # For directories, create a backup directory
+                backup_filename = f"{file_path.name}_{timestamp}"
+                backup_path = backup_dir / backup_filename
+                shutil.copytree(file_path, backup_path)
+                self.log(f"   ✅ Directory backup created: {backup_path}")
+            else:
+                # For files, create a backup file
+                backup_filename = f"{file_path.stem}_{timestamp}{file_path.suffix}"
+                backup_path = backup_dir / backup_filename
+                shutil.copy2(file_path, backup_path)
+                self.log(f"   ✅ File backup created: {backup_path}")
             
-            shutil.copy2(file_path, backup_path)
-            self.log(f"   ✅ Backup created: {backup_path}")
             return backup_path
             
         except Exception as e:
@@ -229,6 +239,7 @@ class QoderStatusChecker:
                 ("Deep Identity Cleanup", self.deep_identity_cleanup),
                 ("Login Identity Cleanup", self.login_identity_cleanup),
                 ("Hardware Fingerprint Reset", self.hardware_fingerprint_reset),
+                ("Hidden Files Cleanup", lambda qsd: self.cleanup_hidden_and_temp_files(qsd)),
                 ("Smart Conversation Management", self.smart_conversation_cleanup)
             ]
 
@@ -384,7 +395,19 @@ class QoderStatusChecker:
                 "Cache", "blob_storage", "Code Cache", "SharedClientCache",
                 "GPUCache", "DawnGraphiteCache", "DawnWebGPUCache", "ShaderCache",
                 "CachedData", "CachedProfilesData", "CachedExtensions",
-                "IndexedDB", "CacheStorage", "WebSQL", "Dictionaries"
+                "IndexedDB", "CacheStorage", "WebSQL", "Dictionaries",
+                # Enhanced: Additional specialized caches
+                "DawnCache", "MediaCache", "MetadataCache", "ThumbnailCache",
+                "IndexCache", "SearchCache", "QueryCache", "ResultsCache",
+                # Enhanced: Extension and plugin caches
+                "ExtensionData", "PluginData", "AddonData",
+                "ExtensionPrefs", "PluginPrefs", "AddonPrefs",
+                "CachedExtensionVSIXs",
+                # Enhanced: WebKit and Chromium caches
+                "WebKitCache", "WebProcessCache", "PluginProcessCache",
+                "RenderProcessCache", "GPUProcessCache",
+                "ChromiumState", "ChromiumPrefs", "ChromiumHistory",
+                "ChromiumCookies", "ChromiumSessions"
             ]
 
             cleaned = 0
@@ -392,9 +415,20 @@ class QoderStatusChecker:
                 cache_path = qoder_support_dir / cache_dir
                 if cache_path.exists():
                     try:
-                        shutil.rmtree(cache_path)
-                        self.log(f"   ✅ Cleared: {cache_dir}")
-                        cleaned += 1
+                        # Special handling for SharedClientCache to preserve MCP files
+                        if cache_dir == "SharedClientCache":
+                            self.clean_shared_client_cache_selective(cache_path)
+                            self.log(f"   ✅ Selectively cleared: {cache_dir} (MCP preserved)")
+                            cleaned += 1
+                        else:
+                            # Create backup before deletion for other caches
+                            backup_path = self.create_backup(cache_path)
+                            if backup_path:
+                                self.log(f"   📋 Backup created for: {cache_dir}")
+                            
+                            shutil.rmtree(cache_path)
+                            self.log(f"   ✅ Cleared: {cache_dir}")
+                            cleaned += 1
                     except Exception as e:
                         self.log(f"   ⚠️  Failed to clear {cache_dir}: {e}")
 
@@ -414,7 +448,33 @@ class QoderStatusChecker:
                 "DeviceMetadata", "HardwareInfo", "SystemInfo",
                 "QuotaManager", "QuotaManager-journal", "origin_bound_certs",
                 "Cookies", "Cookies-journal", "Web Data", "Web Data-journal",
-                "cert_transparency_reporter_state.json"
+                "cert_transparency_reporter_state.json",
+                # Enhanced: Additional browser fingerprint files
+                "BrowserUserAgent", "ClientHints", "NavigatorInfo",
+                "ScreenInfo", "TimezoneInfo", "LanguageInfo",
+                # Enhanced: More network files
+                "DNSCache", "HTTPCache", "ProxySettings",
+                "NetworkConfiguration", "ConnectionHistory",
+                "NetworkDataMigrated", "Reporting and NEL", "HSTS",
+                # Enhanced: Security and authentication
+                "SecuritySettings", "CertificateStore", "TrustStore",
+                "EncryptionKeys", "AuthTokens", "SessionKeys",
+                "Certificate Revocation Lists", "SSLCertificates",
+                # Enhanced: User activity tracking
+                "UserActivity", "AppUsage", "FeatureUsage",
+                "InteractionHistory", "AccessLog", "AuditLog",
+                "ActivityLog", "EventLog", "UserActivityLog",
+                # Enhanced: Autofill and form data
+                "AutofillStrikeDatabase", "AutofillStrikeDatabase-journal",
+                "Feature Engagement Tracker", "PasswordStoreDefault",
+                "AutofillRegexes", "PreferredApps", "UserPrefs", "UserPrefs.backup",
+                # Enhanced: Browser metrics and telemetry
+                "BrowserMetrics", "SafeBrowsing", "OriginTrials",
+                "VideoDecodeStats", "Platform Notifications",
+                # Enhanced: Search and history
+                "Visited Links", "History", "History-journal",
+                "Favicons", "Favicons-journal", "Shortcuts", "Shortcuts-journal",
+                "Top Sites", "Top Sites-journal"
             ]
             
             cleaned = 0
@@ -422,6 +482,11 @@ class QoderStatusChecker:
                 file_path = qoder_support_dir / identity_file
                 if file_path.exists():
                     try:
+                        # Create backup before deletion
+                        backup_path = self.create_backup(file_path)
+                        if backup_path:
+                            self.log(f"   📋 Backup created for: {identity_file}")
+                        
                         if file_path.is_dir():
                             shutil.rmtree(file_path)
                         else:
@@ -441,6 +506,11 @@ class QoderStatusChecker:
                 storage_path = qoder_support_dir / storage_dir
                 if storage_path.exists():
                     try:
+                        # Create backup before deletion
+                        backup_path = self.create_backup(storage_path)
+                        if backup_path:
+                            self.log(f"   📋 Backup created for: {storage_dir}")
+                        
                         shutil.rmtree(storage_path)
                         self.log(f"   ✅ Cleared: {storage_dir}")
                         cleaned += 1
@@ -469,10 +539,17 @@ class QoderStatusChecker:
                         except Exception as e:
                             self.log(f"   ⚠️  Failed to clear {file_name}: {e}")
                 
-                # Preserve mcp.json - important MCP configuration
-                mcp_file = shared_cache / "mcp.json"
-                if mcp_file.exists():
-                    self.log(f"   💾 Preserved: SharedClientCache/mcp.json (MCP config)")
+                # Preserve mcp.json files - important MCP configuration
+                mcp_files = [
+                    shared_cache / "mcp.json",
+                    shared_cache / "extension" / "local" / "mcp.json"
+                ]
+                
+                for mcp_file in mcp_files:
+                    if mcp_file.exists():
+                        self.log(f"   💾 Preserved: {mcp_file.relative_to(qoder_support_dir)} (MCP config)")
+                
+                self.log("   ℹ️  MCP configuration files preserved for functionality")
 
             # Clean authentication files
             auth_files = [
@@ -614,8 +691,42 @@ class QoderStatusChecker:
             
             self.log(f"   🛡️ Hardware fingerprint reset completed for {system_type}")
             
+            # Create decoy files to confuse detection systems
+            self.create_decoy_files(qoder_support_dir)
+            
         except Exception as e:
             self.log(f"   ❌ Hardware reset failed: {e}")
+    
+    def create_decoy_files(self, qoder_support_dir):
+        """Create decoy files to confuse detection systems"""
+        try:
+            self.log("   Creating decoy files for detection confusion...")
+            
+            decoy_files = [
+                "real_machine_id.tmp", "backup_device_id.log", 
+                "old_telemetry.dat", "previous_session.cache",
+                "legacy_fingerprint.json", "archived_identity.bak",
+                "system_backup.tmp", "device_clone.dat",
+                "hardware_backup.json", "original_config.bak"
+            ]
+            
+            for decoy_file in decoy_files:
+                file_path = qoder_support_dir / decoy_file
+                fake_data = {
+                    "fake_id": str(uuid.uuid4()),
+                    "timestamp": (datetime.now() - timedelta(days=random.randint(30, 365))).isoformat(),
+                    "data": hashlib.md5(str(random.random()).encode()).hexdigest(),
+                    "note": "Legacy backup file",
+                    "version": f"{random.randint(1, 5)}.{random.randint(0, 9)}.{random.randint(0, 9)}"
+                }
+                
+                with open(file_path, 'w', encoding='utf-8') as f:
+                    json.dump(fake_data, f, indent=2)
+                
+                self.log(f"   ✅ Created decoy: {decoy_file}")
+            
+        except Exception as e:
+            self.log(f"   ⚠️  Decoy creation failed: {e}")
 
     def smart_conversation_cleanup(self, qoder_support_dir):
         """Smart conversation management - preserve important data"""
@@ -640,6 +751,101 @@ class QoderStatusChecker:
             
         except Exception as e:
             self.log(f"   ❌ Conversation management failed: {e}")
+    
+    def cleanup_hidden_and_temp_files(self, qoder_support_dir):
+        """Clean up hidden files and temporary files"""
+        try:
+            self.log("   Cleaning hidden and temporary files...")
+            cleaned = 0
+            
+            # Clean hidden files (starting with .)
+            for root, dirs, files in os.walk(qoder_support_dir):
+                # Clean hidden files
+                for file in files:
+                    if file.startswith('.') and file not in ['.gitignore', '.gitkeep']:
+                        file_path = Path(root) / file
+                        try:
+                            file_path.unlink()
+                            self.log(f"   ✅ Cleaned hidden file: {file}")
+                            cleaned += 1
+                        except Exception as e:
+                            self.log(f"   ⚠️  Failed to clean {file}: {e}")
+                
+                # Clean hidden directories
+                for dir_name in dirs[:]:
+                    if dir_name.startswith('.') and dir_name not in ['.git']:
+                        dir_path = Path(root) / dir_name
+                        try:
+                            shutil.rmtree(dir_path)
+                            self.log(f"   ✅ Cleaned hidden directory: {dir_name}")
+                            dirs.remove(dir_name)
+                            cleaned += 1
+                        except Exception as e:
+                            self.log(f"   ⚠️  Failed to clean {dir_name}: {e}")
+            
+            # Clean temporary files by extension
+            temp_extensions = ['.tmp', '.temp', '.cache', '.lock', '.pid']
+            for root, dirs, files in os.walk(qoder_support_dir):
+                for file in files:
+                    if any(file.lower().endswith(ext) for ext in temp_extensions):
+                        file_path = Path(root) / file
+                        try:
+                            file_path.unlink()
+                            self.log(f"   ✅ Cleaned temp file: {file}")
+                            cleaned += 1
+                        except Exception as e:
+                            self.log(f"   ⚠️  Failed to clean {file}: {e}")
+            
+            self.log(f"   🧹 Hidden/temp cleanup completed: {cleaned} files")
+            
+        except Exception as e:
+            self.log(f"   ❌ Hidden/temp cleanup failed: {e}")
+    
+    def clean_shared_client_cache_selective(self, shared_cache_path):
+        """Selectively clean SharedClientCache while preserving MCP configuration files"""
+        try:
+            # Define MCP files to preserve
+            mcp_files_to_preserve = [
+                "mcp.json",
+                "extension/local/mcp.json"
+            ]
+            
+            # Create backup of the entire directory first
+            backup_path = self.create_backup(shared_cache_path)
+            if backup_path:
+                self.log(f"   📋 Full backup created for SharedClientCache")
+            
+            # Clean everything except MCP files
+            for item in shared_cache_path.rglob('*'):
+                if item.is_file():
+                    # Check if this file should be preserved
+                    relative_path = item.relative_to(shared_cache_path)
+                    should_preserve = any(str(relative_path) == mcp_file or 
+                                        str(relative_path).endswith(mcp_file) 
+                                        for mcp_file in mcp_files_to_preserve)
+                    
+                    if not should_preserve:
+                        try:
+                            item.unlink()
+                            self.log(f"   ✅ Cleaned: SharedClientCache/{relative_path}")
+                        except Exception as e:
+                            self.log(f"   ⚠️  Failed to clean {relative_path}: {e}")
+                    else:
+                        self.log(f"   💾 Preserved: SharedClientCache/{relative_path} (MCP config)")
+            
+            # Clean empty directories (but preserve structure for MCP)
+            for item in shared_cache_path.rglob('*'):
+                if item.is_dir() and not any(item.iterdir()):
+                    # Don't remove directories that might be needed for MCP
+                    if "extension" not in str(item.relative_to(shared_cache_path)):
+                        try:
+                            item.rmdir()
+                            self.log(f"   ✅ Removed empty dir: {item.relative_to(shared_cache_path)}")
+                        except Exception:
+                            pass  # Directory not empty or protected
+            
+        except Exception as e:
+            self.log(f"   ❌ Selective SharedClientCache cleanup failed: {e}")
 
 def display_menu():
     """Display the simplified main menu with Rich styling"""
@@ -653,13 +859,16 @@ def display_menu():
     
     # Add social links in column format
     combined_text.append("\n📢 Channel: ", style="bold white")
-    combined_text.append("https://t.me/D3_vin", style="blue link")
+    combined_text.append("https://t.me/D3_vin", style="cyan")
     combined_text.append("\n")
     combined_text.append("💬 Chat: ", style="bold white")
-    combined_text.append("https://t.me/D3vin_chat", style="blue link")
+    combined_text.append("https://t.me/D3vin_chat", style="cyan")
     combined_text.append("\n")
     combined_text.append("📁 GitHub: ", style="bold white")
-    combined_text.append("https://github.com/D3-vin", style="blue link")
+    combined_text.append("https://github.com/D3-vin", style="cyan")
+    combined_text.append("\n")
+    combined_text.append("📁 Version: ", style="bold white")
+    combined_text.append("1.1", style="green")
     
     # Add line break and title
     combined_text.append("\n")
@@ -669,6 +878,7 @@ def display_menu():
     title_panel = Panel(
         Align.left(combined_text),
         title="[bold blue]🚀 QODER RESET TOOL 🚀[/bold blue]",  # Added title
+        subtitle="[bold magenta]Dev by D3vin[/bold magenta]",  # Added subtitle at bottom
         box=box.ROUNDED,  # Same as menu
         border_style="bright_blue",  # Same color as menu
         padding=(0, 1),
@@ -714,10 +924,23 @@ def display_menu():
     
     console.print(menu_panel)
 
+def graceful_exit(console):
+    """Graceful exit function for Ctrl+C handling"""
+    console.print("\n[bold bright_blue]👋 Goodbye![/bold bright_blue]")
+    sys.exit(0)
+
+def signal_handler(signum, frame):
+    """Handle Ctrl+C signal"""
+    console = Console()
+    graceful_exit(console)
+
 def main():
     """Main function with simplified Rich menu system"""
     checker = QoderStatusChecker()
     console = Console()
+    
+    # Setup signal handler for Ctrl+C
+    signal.signal(signal.SIGINT, signal_handler)
     
     while True:
         display_menu()
@@ -752,8 +975,7 @@ def main():
                 
         elif choice == "3":
             # Exit
-            console.print("\n[bold bright_blue]👋 Goodbye![/bold bright_blue]")
-            break
+            graceful_exit(console)
         
         # Pause
         if choice in ["1", "2"]:
