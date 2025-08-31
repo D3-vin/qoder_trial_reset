@@ -2,7 +2,7 @@
 
 > **🌐 Language**: [Русский](README_RUS.md) | **English**
 
-A comprehensive command-line tool for resetting Qoder application identity information with advanced anti-detection features and automatic backup system.
+A comprehensive command-line tool for cleaning Qoder application detectable files and changing machine IDs with advanced anti-detection features and configuration management.
 
 ## 📢 Connect with Us
 
@@ -32,20 +32,22 @@ A comprehensive command-line tool for resetting Qoder application identity infor
 ## ✨ Key Features
 
 ### 🛡️ Advanced Anti-Detection System
-- **💻 Enhanced Machine ID Reset** - Generate new machine identifiers with backup files
-- **📊 Advanced Telemetry Reset** - Reset comprehensive telemetry and device tracking data
-- **🔥 Deep Identity Cleanup** - Remove network states, trust tokens, and local storage
+- **🧹 Deep File Cleanup** - Remove detectable files while preserving important data
+- **📊 Telemetry Data Cleanup** - Clear comprehensive telemetry and device tracking data
+- **🔥 Identity File Cleanup** - Remove network states, trust tokens, and local storage
 - **🔐 Login Identity Cleanup** - Clear authentication tokens and session data
-- **🛡️ Hardware Fingerprint Reset** - Generate fake hardware info (strongest anti-detection)
-- **💬 Smart Conversation Management** - Preserve chat history and user settings
+- **🛡️ Hardware Fingerprint Cleanup** - Remove hardware detection files
+- **💬 Smart Data Preservation** - Preserve MCP settings and chat history
 - **🧹 Advanced Cache Cleanup** - Clear application caches while protecting important data
+- **⚡ Live Machine ID Change** - Change machine ID while Qoder is running (requires administrator privileges)
 
-### 🔒 Safety & Backup System
-- **📋 Automatic Backups** - Timestamped backups before any file modification
-- **🔍 Process Detection** - Prevents unsafe operations when Qoder is running  
-- **💾 Metadata Preservation** - Uses `shutil.copy2()` for complete file metadata backup
-- **🔄 Graceful Recovery** - Continues operation even if individual backup fails
+### 🔒 Safety & Configuration System
+- **⚙️ Configuration Management** - JSON-based configuration for runtime behavior
+- **🔍 Process Detection** - Detects Qoder running status for safe operations
+- **💾 Data Preservation** - Preserves MCP settings and conversation data
+- **🔄 Graceful Error Handling** - Continues operation even if individual operations fail
 - **📝 Comprehensive Logging** - Detailed operation logs with status indicators
+- **🎯 Selective Cleanup** - Only removes detectable files, preserves functionality
 
 ### 🌍 Cross-Platform Support
 - **Windows 10/11** - Full feature support (`%APPDATA%\Qoder`)
@@ -125,22 +127,27 @@ pip install psutil rich && python main.py
 ### Menu Options
 
 ```
-🚀 ADVANCED QODER RESET TOOL 🚀
+🚀 QODER RESET TOOL 🚀
 ═══════════════════════════════════════════════════════════
 🔍 1. CHECK - Comprehensive system status analysis
-   • Process status • File integrity • Cache analysis
+   • Process status • File integrity • Configuration status
 
-🔄 2. RESET - Complete advanced reset (All Features)
-   ✅ Enhanced Machine ID & Telemetry Reset
+🧹 2. CLEANUP - Delete detectable files
+   ✅ Telemetry Data Cleanup
    ✅ Deep Identity & Network State Cleanup  
    ✅ Advanced Cache & Storage Cleanup
-   ✅ Hardware Fingerprint Reset & Fake Data Generation
+   ✅ Hardware Fingerprint Cleanup
    ✅ Login Identity & Authentication Cleanup
-   ✅ Smart Conversation Management
+   ✅ Smart Data Preservation (MCP settings & chats)
 
-🚪 3. EXIT - Close application
+⚡ 3. CHANGE MACHINE_ID - Live machine ID modification
+   ✅ Real-time machine ID change while Qoder runs
+   ✅ Create new or use saved machine IDs
+   ⚠️  Requires Qoder to be running and administrator privileges
+
+🚪 4. EXIT - Close application
 ═══════════════════════════════════════════════════════════
-💡 Tip: Run CHECK first to see what will be reset
+💡 Tip: Run CHECK first to see current system status
 ```
 
 ### Quick Start Example
@@ -152,27 +159,37 @@ python main.py
 # 2. Choose option 1 to check current status
 1
 
-# 3. Choose option 2 to perform complete reset  
+# 3. Choose option 2 to cleanup detectable files
 2
 
-# 4. Monitor the detailed progress logs
-# 5. Choose option 3 to exit when done
+# 4. Or choose option 3 to change machine ID (Qoder must be running)
 3
+
+# 5. Monitor the detailed progress logs
+# 6. Choose option 4 to exit when done
+4
 ```
 
 ## 🔧 Technical Details
 
 ### Architecture Overview
 
-The tool implements a comprehensive 7-stage reset process:
+The tool implements a comprehensive cleanup and live modification system:
 
-1. **🔧 Enhanced Machine ID Reset** - Generate multiple machine identifiers
-2. **📊 Advanced Telemetry Reset** - Reset 15+ telemetry identifiers  
+**Cleanup Mode (Option 2):**
+1. **🧹 Machine ID Cleanup** - Remove additional machine identifier files
+2. **📊 Telemetry Data Cleanup** - Remove telemetry identifiers from storage
 3. **🧹 Advanced Cache Cleanup** - Clear 15+ cache directories
 4. **🔥 Deep Identity Cleanup** - Remove network and authentication files
 5. **🔐 Login Identity Cleanup** - Clear login credentials and session data
-6. **🛡️ Hardware Fingerprint Reset** - Generate system-specific fake hardware
-7. **💬 Smart Conversation Management** - Preserve important user data
+6. **🛡️ Hardware Fingerprint Cleanup** - Remove hardware detection files
+7. **💬 Smart Data Preservation** - Preserve MCP settings and conversation data
+
+**Live Machine ID Change (Option 3):**
+- **⚡ Real-time Modification** - Change machine ID while Qoder is running
+- **💾 ID Management** - Create new or use saved machine IDs
+- **🔧 Memory Injection** - Direct memory modification using pymem
+- **⚠️ Administrator Required** - Needs elevated privileges for memory access
 
 ### Core Technologies
 
@@ -181,86 +198,78 @@ The tool implements a comprehensive 7-stage reset process:
 - **File Operations**: Safe file handling with `pathlib` and `shutil`
 - **JSON Processing**: Configuration file manipulation with built-in `json` module
 - **UUID Generation**: Cryptographically secure identifiers with `uuid.uuid4()`
-- **Hash Generation**: SHA256 hashing for telemetry machine IDs
-- **Platform Detection**: System-specific adaptations with `platform` module
+- **Memory Injection**: Real-time memory modification with `pymem` for live ID changes
+- **Configuration Management**: Runtime behavior control through `config.json`
+- **Modular Architecture**: Separated machine ID functionality for code protection
 
 ## 📁 File Operations
 
 ### Files Created/Modified
 
-#### 🔑 **Machine Identity Files**
+#### 🔑 **Machine Identity Files (Cleaned/Managed)**
 ```
-📄 machineid                    - Primary machine UUID
-📄 deviceid                     - Device identifier  
-📄 hardware_uuid                - Hardware-specific UUID
-📄 system_uuid                  - System identifier
-📄 platform_id                  - Platform-specific ID
-📄 installation_id              - Installation UUID
-📄 cpu_id                       - CPU identifier (hardware fingerprint)
-📄 gpu_id                       - GPU identifier (hardware fingerprint) 
-📄 memory_id                    - Memory identifier (hardware fingerprint)
-📄 board_serial                 - Motherboard serial (hardware fingerprint)
-📄 bios_uuid                    - BIOS identifier (hardware fingerprint)
+📄 machineid                    - Primary machine UUID (preserved, managed by machine_id_changer)
+📄 deviceid                     - Device identifier (removed if exists)
+📄 hardware_uuid                - Hardware-specific UUID (removed if exists)
+📄 system_uuid                  - System identifier (removed if exists)
+📄 platform_id                  - Platform-specific ID (removed if exists)
+📄 installation_id              - Installation UUID (removed if exists)
+📄 cpu_id                       - CPU identifier (removed if exists)
+📄 gpu_id                       - GPU identifier (removed if exists)
 ```
 
 #### 📊 **Configuration Files Modified**
 ```
-📄 User/globalStorage/storage.json - Main telemetry configuration
+📄 User/globalStorage/storage.json - Main telemetry configuration (cleaned)
+📄 config.json - Tool configuration file
+📄 User/settings.json - Qoder settings (auto-update control)
 ```
 
-**Updated Keys in storage.json:**
+**Removed Keys from storage.json (Cleanup Mode):**
 ```json
 {
-  "telemetry.machineId": "SHA256_HASH",
-  "telemetry.devDeviceId": "UUID",
-  "telemetry.sqmId": "UUID", 
-  "telemetry.sessionId": "UUID",
-  "telemetry.installationId": "UUID",
-  "telemetry.clientId": "UUID", 
-  "telemetry.userId": "UUID",
-  "telemetry.anonymousId": "UUID",
-  "machineId": "SHA256_HASH",
-  "deviceId": "UUID",
-  "installationId": "UUID",
-  "hardwareId": "UUID",
-  "platformId": "UUID",
-  "system.platform": "darwin/win32/linux",
-  "system.arch": "x64/arm64", 
-  "system.version": "SYSTEM_VERSION",
-  "system.timezone": "RANDOM_TIMEZONE"
+  "telemetry.machineId": "REMOVED",
+  "telemetry.devDeviceId": "REMOVED",
+  "telemetry.sqmId": "REMOVED", 
+  "telemetry.sessionId": "REMOVED",
+  "telemetry.installationId": "REMOVED",
+  "telemetry.clientId": "REMOVED", 
+  "telemetry.userId": "REMOVED",
+  "telemetry.anonymousId": "REMOVED",
+  "machineId": "REMOVED",
+  "deviceId": "REMOVED",
+  "installationId": "REMOVED",
+  "hardwareId": "REMOVED",
+  "platformId": "REMOVED",
+  "system.platform": "REMOVED",
+  "system.arch": "REMOVED", 
+  "system.version": "REMOVED",
+  "system.timezone": "REMOVED"
 }
 ```
 
-#### 🛡️ **Fake Hardware Files Generated**
-```
-📄 hardware_detection.json      - Fake hardware detection data
-📄 device_capabilities.json     - Fake device capabilities
-📄 system_features.json         - Fake system features
-📄 platform_detection.json      - Fake platform detection
-```
-
-**Example Fake Hardware (macOS):**
+**Tool Configuration (config.json):**
 ```json
 {
-  "cpu": {
-    "name": "Apple M4 Pro",
-    "cores": 12,
-    "frequency": "3.2GHz"
-  },
-  "gpu": {
-    "name": "Apple M4 Pro GPU",
-    "memory": "24GB"
-  },
-  "memory": {
-    "total": "32GB", 
-    "type": "LPDDR5"
-  },
-  "system": {
-    "platform": "darwin",
-    "version": "14.2.1",
-    "arch": "arm64"
-  }
+  "create_backups": false,
+  "disable_auto_update": true
 }
+```
+
+#### 🛡️ **Hardware Fingerprint Files (Removed)**
+```
+📄 hardware_detection.json      - Removed if exists
+📄 device_capabilities.json     - Removed if exists
+📄 system_features.json         - Removed if exists
+📄 platform_detection.json      - Removed if exists
+```
+
+**Hardware Cache Directories Cleared:**
+```
+📁 GPUCache/                    - GPU processing cache (cleared)
+📁 DawnGraphiteCache/           - Graphics rendering cache (cleared)
+📁 DawnWebGPUCache/             - WebGPU cache (cleared)
+📁 ShaderCache/                 - Shader compilation cache (cleared)
 ```
 
 ### Files and Directories Deleted
@@ -317,63 +326,80 @@ The tool implements a comprehensive 7-stage reset process:
 
 ### Files and Directories Preserved
 
-#### 💬 **Conversation Data (Always Preserved)**
+#### 💬 **Data Always Preserved**
 ```
 📁 User/workspaceStorage/*/chatSessions/ - Chat session files ✅
 📁 User/workspaceStorage/*/chatEditingSessions/ - Chat editing sessions ✅
 📁 User/History/                - Command history ✅
-📄 User/settings.json          - User settings ✅
+📄 User/settings.json          - User settings ✅ (auto-update may be modified)
+📄 SharedClientCache/mcp.json   - MCP configuration ✅ (CRITICAL)
+📄 machineid                    - Main machine ID file ✅ (managed separately)
 ```
 
-#### 🔧 **Important Configuration (Always Preserved)**
+#### ⚡ **Live Machine ID Change**
 ```
-📄 SharedClientCache/mcp.json   - MCP configuration ✅ (CRITICAL)
+🔧 Memory Injection             - Direct process memory modification
+💾 ID Persistence              - Save/load machine IDs from AppData/Roaming/Qoder/
+🎯 Process Targeting            - Automatic Qoder process detection
+⚠️ Administrator Required       - Elevated privileges for memory access
 ```
 
 ## 🔒 Safety Features
 
-### Automatic Backup System
+### Configuration Management System
 
-The tool creates comprehensive backups before any file modification:
+The tool uses JSON-based configuration for runtime behavior:
 
-#### Backup Features:
-- **Timestamped Format**: `filename_YYYYMMDD_HHMMSS.extension`
-- **Organized Location**: `[original_directory]/backup/`
-- **Metadata Preservation**: Uses `shutil.copy2()` to preserve file permissions and timestamps
-- **Failure Resilience**: Continues operation even if individual backups fail
-- **Complete Recovery**: All original files can be restored from backups
+#### Configuration Features:
+- **Runtime Control**: `config.json` controls tool behavior without UI interaction
+- **Auto-Update Management**: Automatically disables Qoder auto-update if configured
+- **Backup Control**: Backups are disabled by default for faster operation
+- **Persistent Settings**: Configuration survives tool restarts
 
-#### Backup Example:
+#### Configuration Example:
 ```
-📁 Qoder/backup/
-├── 📄 machineid_20250826_143052
-├── 📄 storage_20250826_143052.json
-└── 📄 Preferences_20250826_143053
+📄 config.json
+{
+  "create_backups": false,
+  "disable_auto_update": true
+}
 ```
 
-### Process Safety
+### Process and Operation Safety
 
 - **🔍 Process Detection**: Automatically detects running Qoder processes
-- **⚠️ Safety Warnings**: Prevents operations while Qoder is running  
+- **⚠️ Context-Aware Operations**: 
+  - Cleanup mode: Prevents operations while Qoder is running
+  - Live change mode: Requires Qoder to be running
 - **🛡️ Cross-Platform**: Works on Windows, macOS, and Linux
 - **📝 Clear Messaging**: Detailed status messages and error handling
+- **🔧 Administrator Privileges**: Required for live machine ID changes
 
 ### Data Protection
 
 - **💬 Conversation Preservation**: All chat history and editing sessions are preserved
 - **🔧 Configuration Safety**: Critical MCP settings are never deleted
-- **📊 Selective Updates**: Only identity-related keys in storage.json are modified
-- **🔄 Rollback Capability**: Complete backup system enables full recovery
+- **📊 Selective Cleanup**: Only detectable files are removed, functionality preserved
+- **🎯 Smart Preservation**: Automatically preserves important configuration files
+- **⚡ Live Modification**: Machine ID changes without file system impact
 
 ## 🚨 Troubleshooting
 
 ### Common Issues
 
-#### 1. **"Qoder is running" Error**
+#### 1. **"Qoder is running" Error (Cleanup Mode)**
 ```
-Solution: Close Qoder completely before running the reset tool
+Solution: Close Qoder completely before running cleanup
 - Use Ctrl+Q (Cmd+Q on macOS) to quit Qoder
 - Check Task Manager/Activity Monitor for remaining processes
+```
+
+#### 1a. **"Qoder is not running" Error (Change Machine ID Mode)**
+```
+Solution: Start Qoder before using machine ID change
+- Launch Qoder application
+- Wait for it to fully load
+- Run the tool as administrator
 ```
 
 #### 2. **"Directory not found" Error**  
@@ -396,26 +422,42 @@ chmod -R u+rw ~/Library/Application\ Support/Qoder/
 pip install -r requirements.txt
 
 # Or install manually
-pip install psutil rich
+pip install psutil rich pymem keyboard
 
 # Verify installation  
-python -c "import psutil, rich; print('All dependencies available')"
+python -c "import psutil, rich, pymem, keyboard; print('All dependencies available')"
+```
+
+#### 5. **Administrator Privileges Required (Machine ID Change)**
+```
+Solution: Run as administrator for machine ID changes
+- Windows: Right-click PowerShell/CMD -> "Run as administrator"
+- Run: python main.py
+- Choose option 3 (Change Machine ID)
 ```
 
 ### Log Analysis
 
 The tool provides detailed logging for troubleshooting:
 
+**Cleanup Mode:**
 ```
-[2025-01-26 14:30:52] 🚀 STARTING COMPREHENSIVE QODER RESET
-[2025-01-26 14:30:52] --- 🔧 Resetting Machine ID (Enhanced) ---
-[2025-01-26 14:30:52]    ✅ Backup created: /path/to/backup/machineid_20250126_143052
-[2025-01-26 14:30:52]    ✅ Main machine ID reset: 12345678-1234-5678-9012-123456789abc
-[2025-01-26 14:30:52]    ✅ Created: deviceid
-[2025-01-26 14:30:52] --- 📊 Resetting Telemetry Data (Enhanced) ---  
-[2025-01-26 14:30:53]    ✅ Enhanced telemetry reset completed
-[2025-01-26 14:30:53]    📊 Updated 13 telemetry IDs
-[2025-01-26 14:30:53] 🎉 COMPREHENSIVE RESET COMPLETED SUCCESSFULLY!
+[2025-08-31 14:30:52] 🚀 STARTING COMPREHENSIVE QODER CLEANUP
+[2025-08-31 14:30:52] --- 🧹 Machine ID Cleanup ---
+[2025-08-31 14:30:52]    ℹ️  Main machineid file preserved (managed by machine_id_changer)
+[2025-08-31 14:30:52]    ✅ Removed: deviceid
+[2025-08-31 14:30:52] --- 📊 Telemetry Data Cleanup ---  
+[2025-08-31 14:30:53]    ✅ Removed 13 telemetry entries
+[2025-08-31 14:30:53] 🎉 COMPREHENSIVE CLEANUP COMPLETED SUCCESSFULLY!
+```
+
+**Live Machine ID Change:**
+```
+[2025-08-31 14:35:15] ⚡ Starting machine ID change...
+[2025-08-31 14:35:15] ✅ Qoder is running
+[2025-08-31 14:35:16] Generated new machine ID: 87654321-4321-8765-2109-876543210fed
+[2025-08-31 14:35:16] Found qoder.exe (pid 1234) -> freeze armed
+[2025-08-31 14:35:16] Machine ID change started. Press Ctrl+C to exit.
 ```
 
 ### Status Indicators
@@ -430,24 +472,34 @@ The tool provides detailed logging for troubleshooting:
 
 ### Before Using
 
-1. **📋 Create Backup**: Although the tool creates automatic backups, consider manual backup of important data
-2. **🚪 Close Qoder**: Ensure Qoder is completely closed before running any reset operations  
+1. **📚 Read Documentation**: Understand what each mode does before proceeding
+2. **⚙️ Choose Mode Correctly**: 
+   - **Cleanup**: Close Qoder completely before running
+   - **Change Machine ID**: Qoder must be running and tool needs administrator privileges
 3. **🔍 Test Environment**: Consider testing in a non-production environment first
-4. **📚 Read Documentation**: Understand what files will be modified before proceeding
+4. **💾 Important Files**: The tool preserves MCP settings and conversations automatically
 
-### After Reset
+### After Cleanup
 
-1. **🔄 Restart System**: Recommended after hardware fingerprint reset
+1. **🔄 Restart Qoder**: Launch Qoder to verify functionality after cleanup
 2. **🌐 Use Fingerprint Browser**: Use fingerprint-protected browser for new registrations
-3. **🔐 Re-login**: You will need to log in to Qoder again
-4. **📊 Verify Changes**: Check that new machine IDs have been generated
+3. **🔐 Re-login**: You may need to log in to Qoder again
+4. **📊 Verify Operation**: Check that Qoder works normally with preserved settings
+
+### After Live Machine ID Change
+
+1. **⚡ Immediate Effect**: Machine ID change takes effect immediately while Qoder runs
+2. **💾 ID Persistence**: New machine ID is saved for future use
+3. **🔄 No Restart Required**: Changes apply without restarting Qoder
+4. **📊 Verify in Memory**: Machine ID is actively maintained in Qoder's memory
 
 ### Data Safety
 
 - **💬 Conversations**: All chat history is preserved by default
 - **🔧 Settings**: User preferences and MCP configuration are maintained
 - **📁 Workspaces**: All workspace data remains intact
-- **🔑 Identity Only**: Only tracking and identity data is reset
+- **🧹 Cleanup Only**: Only detectable files are removed, core functionality preserved
+- **⚡ Live Changes**: Machine ID changes don't affect file system or user data
 
 ## 📄 License
 
@@ -468,14 +520,19 @@ If you encounter issues:
 
 ```bash
 # Install dependencies and run
-pip install psutil && python main.py
+pip install psutil rich pymem keyboard && python main.py
 ```
 
 ### In the menu:
 1. Choose option **1** to check your current system status
-2. Choose option **2** to perform the complete advanced reset
-3. Monitor the detailed progress logs
-4. Restart Qoder and enjoy your new identity!
+2. Choose option **2** to cleanup detectable files (close Qoder first)
+3. Choose option **3** to change machine ID live (Qoder must be running, requires admin)
+4. Monitor the detailed progress logs
+5. Continue using Qoder with cleaned/changed identity!
 
+### Mode Selection Guide:
+- **🔍 CHECK**: Always safe to run, shows current status
+- **🧹 CLEANUP**: Use when Qoder is closed, removes detectable files
+- **⚡ CHANGE MACHINE_ID**: Use when Qoder is running, requires administrator privileges
 
-This tool provides the most comprehensive Qoder identity reset available, covering all known detection vectors while maintaining complete data safety through automatic backups and selective preservation.
+This tool provides comprehensive Qoder identity management, covering detection cleanup and live machine ID modification while maintaining complete data safety through smart preservation of critical files and settings.

@@ -10,6 +10,8 @@ from datetime import datetime, timedelta
 import platform
 import random
 import signal
+import time
+import ctypes
 
 # Rich imports for beautiful UI
 from rich.console import Console
@@ -23,10 +25,17 @@ from rich.progress import Progress, SpinnerColumn, BarColumn, TextColumn, TimeEl
 from rich.status import Status
 from rich.live import Live
 from rich.columns import Columns
+import pymem
+import pymem.process
+# Memory bypass imports
+from machine_id_changer import MachineIdChanger
+
+
 
 class QoderStatusChecker:
-    def __init__(self):
+    def __init__(self, create_backups=False):
         self.console = Console()
+        self.create_backups = False  # Force disable backups
     
     def log(self, message, style="white"):
         """Print log message using Rich console with styling"""
@@ -56,6 +65,10 @@ class QoderStatusChecker:
     
     def create_backup(self, file_path):
         """Create backup of a file or directory with timestamp"""
+        # Check if backups are enabled
+        if not self.create_backups:
+            return None
+            
         try:
             file_path = Path(file_path)
             if not file_path.exists():
@@ -161,6 +174,26 @@ class QoderStatusChecker:
                         self.log(f"   ❌ Failed to read telemetry data: {e}")
                 else:
                     self.log("   ❌ Telemetry data file does not exist")
+                
+                # 5. Check settings.json file
+                self.log("5. Checking settings file...")
+                settings_json_file = qoder_support_dir / "User/settings.json"
+                if settings_json_file.exists():
+                    try:
+                        with open(settings_json_file, 'r', encoding='utf-8') as f:
+                            settings_data = json.load(f)
+
+                        if 'app' in settings_data and 'configAdvancedAutoUpdate' in settings_data['app']:
+                            auto_update = settings_data['app']['configAdvancedAutoUpdate']
+                            status = "ENABLED" if auto_update else "DISABLED"
+                            self.log(f"   ✅ Auto Update: {status}")
+                        else:
+                            self.log("   ⚠️  Auto Update setting not found")
+
+                    except Exception as e:
+                        self.log(f"   ❌ Failed to read settings file: {e}")
+                else:
+                    self.log("   ❌ Settings file does not exist")
             else:
                 self.log("   ❌ Qoder directory does not exist")
                 
@@ -191,11 +224,8 @@ class QoderStatusChecker:
                 raise Exception("Qoder application data directory not found")
 
             if machine_id_file.exists():
-                # Create backup before modifying
-                self.log("Creating backup of machine ID file...")
-                backup_path = self.create_backup(machine_id_file)
-                if backup_path is None:
-                    self.log("Warning: Failed to create backup, continuing anyway...")
+                # Skip backup creation as it's disabled
+                self.log("Skipping backup as disabled...")
                 
                 new_machine_id = str(uuid.uuid4())
                 with open(machine_id_file, 'w') as f:
@@ -282,17 +312,14 @@ class QoderStatusChecker:
             machine_id_file = qoder_support_dir / "machineid"
             new_machine_id = str(uuid.uuid4())
             
-            # Create backup if file exists
-            if machine_id_file.exists():
-                backup_path = self.create_backup(machine_id_file)
-                if backup_path:
-                    self.log("   ✅ Backup created successfully")
+            # Skip backup creation as it's disabled
+            self.log("Skipping backup as disabled...")
             
             with open(machine_id_file, 'w') as f:
                 f.write(new_machine_id)
             self.log(f"   ✅ Main machine ID reset: {new_machine_id}")
             
-            # Create additional ID files for enhanced protection
+            # Remove additional ID files instead of creating them
             additional_ids = [
                 "deviceid", "hardware_uuid", "system_uuid", 
                 "platform_id", "installation_id", "cpu_id", "gpu_id"
@@ -300,10 +327,14 @@ class QoderStatusChecker:
             
             for id_file in additional_ids:
                 file_path = qoder_support_dir / id_file
-                new_id = str(uuid.uuid4())
-                with open(file_path, 'w') as f:
-                    f.write(new_id)
-                self.log(f"   ✅ Created: {id_file}")
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        self.log(f"   ✅ Removed: {id_file}")
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to remove {id_file}: {e}")
+                else:
+                    self.log(f"   ℹ️  {id_file} not found")
             
         except Exception as e:
             self.log(f"   ❌ Machine ID reset failed: {e}")
@@ -314,10 +345,8 @@ class QoderStatusChecker:
             storage_json_file = qoder_support_dir / "User/globalStorage/storage.json"
             
             if storage_json_file.exists():
-                # Create backup
-                backup_path = self.create_backup(storage_json_file)
-                if backup_path:
-                    self.log("   ✅ Backup created successfully")
+                # Skip backup creation as it's disabled
+                self.log("Skipping backup as disabled...")
                 
                 with open(storage_json_file, 'r', encoding='utf-8') as f:
                     data = json.load(f)
@@ -421,10 +450,8 @@ class QoderStatusChecker:
                             self.log(f"   ✅ Selectively cleared: {cache_dir} (MCP preserved)")
                             cleaned += 1
                         else:
-                            # Create backup before deletion for other caches
-                            backup_path = self.create_backup(cache_path)
-                            if backup_path:
-                                self.log(f"   📋 Backup created for: {cache_dir}")
+                            # Skip backup creation as it's disabled
+                            self.log("Skipping backup as disabled...")
                             
                             shutil.rmtree(cache_path)
                             self.log(f"   ✅ Cleared: {cache_dir}")
@@ -482,10 +509,8 @@ class QoderStatusChecker:
                 file_path = qoder_support_dir / identity_file
                 if file_path.exists():
                     try:
-                        # Create backup before deletion
-                        backup_path = self.create_backup(file_path)
-                        if backup_path:
-                            self.log(f"   📋 Backup created for: {identity_file}")
+                        # Skip backup creation as it's disabled
+                        self.log("Skipping backup as disabled...")
                         
                         if file_path.is_dir():
                             shutil.rmtree(file_path)
@@ -506,10 +531,8 @@ class QoderStatusChecker:
                 storage_path = qoder_support_dir / storage_dir
                 if storage_path.exists():
                     try:
-                        # Create backup before deletion
-                        backup_path = self.create_backup(storage_path)
-                        if backup_path:
-                            self.log(f"   📋 Backup created for: {storage_dir}")
+                        # Skip backup creation as it's disabled
+                        self.log("Skipping backup as disabled...")
                         
                         shutil.rmtree(storage_path)
                         self.log(f"   ✅ Cleared: {storage_dir}")
@@ -599,74 +622,7 @@ class QoderStatusChecker:
     def hardware_fingerprint_reset(self, qoder_support_dir):
         """Reset hardware fingerprints and generate fake hardware info"""
         try:
-            system_type = platform.system()
-            
-            # Generate fake hardware info based on system
-            if system_type == "Darwin":  # macOS
-                fake_hardware = {
-                    "cpu": {
-                        "name": f"Apple M{random.randint(2, 5)} Pro",
-                        "cores": random.choice([8, 10, 12, 16]),
-                        "frequency": f"{random.uniform(2.0, 4.0):.1f}GHz"
-                    },
-                    "gpu": {
-                        "name": f"Apple M{random.randint(2, 5)} Pro GPU",
-                        "memory": f"{random.choice([16, 24, 32])}GB"
-                    },
-                    "memory": {
-                        "total": f"{random.choice([16, 24, 32, 64])}GB",
-                        "type": "LPDDR5"
-                    }
-                }
-            elif system_type == "Windows":
-                cpu_brands = ["Intel", "AMD"]
-                gpu_brands = ["NVIDIA", "AMD", "Intel"]
-                fake_hardware = {
-                    "cpu": {
-                        "name": f"{random.choice(cpu_brands)} Core i{random.choice([5,7,9])}-{random.randint(12000,14000)}",
-                        "cores": random.choice([6, 8, 12, 16]),
-                        "frequency": f"{random.uniform(3.0, 5.0):.1f}GHz"
-                    },
-                    "gpu": {
-                        "name": f"{random.choice(gpu_brands)} RTX {random.choice([4060, 4070, 4080])}",
-                        "memory": f"{random.choice([8, 12, 16])}GB"
-                    },
-                    "memory": {
-                        "total": f"{random.choice([16, 32, 64])}GB",
-                        "type": "DDR5"
-                    }
-                }
-            else:  # Linux
-                fake_hardware = {
-                    "cpu": {
-                        "name": f"Intel Core i{random.choice([5,7])}-{random.randint(10000,12000)}",
-                        "cores": random.choice([4, 6, 8]),
-                        "frequency": f"{random.uniform(2.5, 4.0):.1f}GHz"
-                    },
-                    "gpu": {
-                        "name": f"NVIDIA GTX {random.choice([1650, 1660, 3060])}",
-                        "memory": f"{random.choice([4, 6, 8])}GB"
-                    },
-                    "memory": {
-                        "total": f"{random.choice([8, 16, 32])}GB",
-                        "type": "DDR4"
-                    }
-                }
-            
-            # Add system info
-            fake_hardware.update({
-                "system": {
-                    "platform": system_type.lower(),
-                    "version": self.generate_system_version(),
-                    "arch": platform.machine()
-                },
-                "fingerprint_reset": {
-                    "timestamp": datetime.now().isoformat(),
-                    "reset_id": str(uuid.uuid4())
-                }
-            })
-            
-            # Create multiple fake hardware files
+            # Remove existing hardware files instead of creating new ones
             fake_files = [
                 "hardware_detection.json", "device_capabilities.json", 
                 "system_features.json", "platform_detection.json"
@@ -674,9 +630,14 @@ class QoderStatusChecker:
             
             for fake_file in fake_files:
                 file_path = qoder_support_dir / fake_file
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(fake_hardware, f, indent=2, ensure_ascii=False)
-                self.log(f"   ✅ Created: {fake_file}")
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        self.log(f"   ✅ Removed: {fake_file}")
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to remove {fake_file}: {e}")
+                else:
+                    self.log(f"   ℹ️  {fake_file} not found")
             
             # Clear existing hardware cache
             hardware_dirs = ["GPUCache", "DawnGraphiteCache", "DawnWebGPUCache", "ShaderCache"]
@@ -689,18 +650,18 @@ class QoderStatusChecker:
                     except Exception as e:
                         self.log(f"   ⚠️  Failed to clear {hw_dir}: {e}")
             
-            self.log(f"   🛡️ Hardware fingerprint reset completed for {system_type}")
+            self.log(f"   🛡️ Hardware fingerprint reset completed")
             
-            # Create decoy files to confuse detection systems
-            self.create_decoy_files(qoder_support_dir)
+            # Remove decoy files instead of creating them
+            self.remove_decoy_files(qoder_support_dir)
             
         except Exception as e:
             self.log(f"   ❌ Hardware reset failed: {e}")
     
-    def create_decoy_files(self, qoder_support_dir):
-        """Create decoy files to confuse detection systems"""
+    def remove_decoy_files(self, qoder_support_dir):
+        """Remove decoy files that might have been created previously"""
         try:
-            self.log("   Creating decoy files for detection confusion...")
+            self.log("   Removing existing decoy files...")
             
             decoy_files = [
                 "real_machine_id.tmp", "backup_device_id.log", 
@@ -710,23 +671,24 @@ class QoderStatusChecker:
                 "hardware_backup.json", "original_config.bak"
             ]
             
+            removed = 0
             for decoy_file in decoy_files:
                 file_path = qoder_support_dir / decoy_file
-                fake_data = {
-                    "fake_id": str(uuid.uuid4()),
-                    "timestamp": (datetime.now() - timedelta(days=random.randint(30, 365))).isoformat(),
-                    "data": hashlib.md5(str(random.random()).encode()).hexdigest(),
-                    "note": "Legacy backup file",
-                    "version": f"{random.randint(1, 5)}.{random.randint(0, 9)}.{random.randint(0, 9)}"
-                }
-                
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    json.dump(fake_data, f, indent=2)
-                
-                self.log(f"   ✅ Created decoy: {decoy_file}")
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        self.log(f"   ✅ Removed decoy: {decoy_file}")
+                        removed += 1
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to remove {decoy_file}: {e}")
+            
+            if removed > 0:
+                self.log(f"   🧹 Removed {removed} decoy files")
+            else:
+                self.log("   ℹ️  No decoy files found to remove")
             
         except Exception as e:
-            self.log(f"   ⚠️  Decoy creation failed: {e}")
+            self.log(f"   ⚠️  Decoy removal failed: {e}")
 
     def smart_conversation_cleanup(self, qoder_support_dir):
         """Smart conversation management - preserve important data"""
@@ -810,10 +772,8 @@ class QoderStatusChecker:
                 "extension/local/mcp.json"
             ]
             
-            # Create backup of the entire directory first
-            backup_path = self.create_backup(shared_cache_path)
-            if backup_path:
-                self.log(f"   📋 Full backup created for SharedClientCache")
+            # Skip backup creation as it's disabled
+            self.log("Skipping backup as disabled...")
             
             # Clean everything except MCP files
             for item in shared_cache_path.rglob('*'):
@@ -847,7 +807,228 @@ class QoderStatusChecker:
         except Exception as e:
             self.log(f"   ❌ Selective SharedClientCache cleanup failed: {e}")
 
-def display_menu():
+    def cleanup_detectable_files(self):
+        """Clean up detectable files while preserving MCP settings and chats"""
+        self.log("🧹 Starting cleanup of detectable files...")
+
+        # Check if Qoder is running
+        is_running, _ = self.check_qoder_running()
+        if is_running:
+            self.log("❌ Error: Qoder is running, please close it first", "red")
+            return
+
+        try:
+            home_dir = Path.home()
+            # Adjusting path for cross-platform compatibility
+            if sys.platform == "win32":
+                qoder_support_dir = home_dir / "AppData/Roaming/Qoder"
+            else:
+                qoder_support_dir = home_dir / "Library/Application Support/Qoder"
+            
+            if not qoder_support_dir.exists():
+                raise Exception("Qoder application data directory not found")
+
+            # Progress tracking with same tasks as reset but only cleanup
+            cleanup_tasks = [
+                ("Machine ID Cleanup", self.cleanup_machine_id),
+                ("Telemetry Data Cleanup", self.cleanup_telemetry_data),
+                ("Advanced Cache Cleanup", self.advanced_cache_cleanup),
+                ("Deep Identity Cleanup", self.deep_identity_cleanup),
+                ("Login Identity Cleanup", self.login_identity_cleanup),
+                ("Hardware Fingerprint Cleanup", self.cleanup_hardware_fingerprint),
+                ("Hidden Files Cleanup", lambda qsd: self.cleanup_hidden_and_temp_files(qsd)),
+                ("Conversation Management", self.smart_conversation_cleanup)
+            ]
+
+            self.log("🚀 STARTING COMPREHENSIVE QODER CLEANUP")
+            
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                TimeElapsedColumn(),
+                console=self.console
+            ) as progress:
+                
+                main_task = progress.add_task("🧹 Cleaning Qoder Files...", total=len(cleanup_tasks))
+                
+                for i, (task_name, task_func) in enumerate(cleanup_tasks, 1):
+                    progress.update(main_task, description=f"🧹 {task_name}...")
+                    
+                    self.log(f"\n--- 🧹 {task_name} ---")
+                    task_func(qoder_support_dir)
+                    
+                    progress.advance(main_task)
+                    import time
+                    time.sleep(0.3)  # Brief pause for visual effect
+
+            self.log("🎉 COMPREHENSIVE CLEANUP COMPLETED SUCCESSFULLY!")
+            self.log("✅ All detectable files have been cleaned")
+            self.log("✅ MCP settings and chats preserved")
+            self.log("🔄 You can now restart Qoder safely")
+
+        except Exception as e:
+            self.log(f"❌ Failed to cleanup detectable files: {e}", "red")
+
+    def cleanup_machine_id(self, qoder_support_dir):
+        """Remove machine ID files without creating new ones"""
+        try:
+            # Skip removing main machine ID file (managed by machine_id_changer.py)
+            self.log(f"   ℹ️  Main machineid file preserved (managed by machine_id_changer)")
+            
+            # Remove additional ID files
+            additional_ids = [
+                "deviceid", "hardware_uuid", "system_uuid", 
+                "platform_id", "installation_id", "cpu_id", "gpu_id"
+            ]
+            
+            for id_file in additional_ids:
+                file_path = qoder_support_dir / id_file
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        self.log(f"   ✅ Removed: {id_file}")
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to remove {id_file}: {e}")
+            
+        except Exception as e:
+            self.log(f"   ❌ Machine ID cleanup failed: {e}")
+
+    def cleanup_telemetry_data(self, qoder_support_dir):
+        """Remove telemetry data without creating new entries"""
+        try:
+            storage_json_file = qoder_support_dir / "User/globalStorage/storage.json"
+            
+            if storage_json_file.exists():
+                with open(storage_json_file, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+
+                # Remove telemetry entries instead of replacing them
+                telemetry_keys = [
+                    'telemetry.machineId', 'telemetry.devDeviceId', 'telemetry.sessionId',
+                    'telemetry.installationId', 'telemetry.clientId', 'telemetry.userId',
+                    'telemetry.anonymousId', 'telemetry.sqmId', 'machineId', 'deviceId',
+                    'installationId', 'hardwareId', 'platformId', 'system.platform',
+                    'system.arch', 'system.version', 'system.timezone'
+                ]
+                
+                removed_count = 0
+                for key in telemetry_keys:
+                    if key in data:
+                        del data[key]
+                        removed_count += 1
+                
+                if removed_count > 0:
+                    with open(storage_json_file, 'w', encoding='utf-8') as f:
+                        json.dump(data, f, indent=4, ensure_ascii=False)
+                    self.log(f"   ✅ Removed {removed_count} telemetry entries")
+                else:
+                    self.log(f"   ℹ️  No telemetry data found")
+            else:
+                self.log("   ⚠️  Telemetry file not found")
+                
+        except Exception as e:
+            self.log(f"   ❌ Telemetry cleanup failed: {e}")
+
+    def cleanup_hardware_fingerprint(self, qoder_support_dir):
+        """Remove hardware fingerprint files without creating fake ones"""
+        try:
+            # Remove hardware detection files
+            fake_files = [
+                "hardware_detection.json", "device_capabilities.json", 
+                "system_features.json", "platform_detection.json"
+            ]
+            
+            for fake_file in fake_files:
+                file_path = qoder_support_dir / fake_file
+                if file_path.exists():
+                    try:
+                        file_path.unlink()
+                        self.log(f"   ✅ Removed: {fake_file}")
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to remove {fake_file}: {e}")
+            
+            # Clear existing hardware cache
+            hardware_dirs = ["GPUCache", "DawnGraphiteCache", "DawnWebGPUCache", "ShaderCache"]
+            for hw_dir in hardware_dirs:
+                dir_path = qoder_support_dir / hw_dir
+                if dir_path.exists():
+                    try:
+                        shutil.rmtree(dir_path)
+                        self.log(f"   ✅ Cleared: {hw_dir}")
+                    except Exception as e:
+                        self.log(f"   ⚠️  Failed to clear {hw_dir}: {e}")
+            
+            self.log(f"   🛡️ Hardware fingerprint cleanup completed")
+            
+        except Exception as e:
+            self.log(f"   ❌ Hardware cleanup failed: {e}")
+
+
+
+def load_config():
+    """Load configuration from config.json file"""
+    config_path = Path(__file__).parent / "config.json"
+    try:
+        with open(config_path, 'r') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # If config file doesn't exist, create default config
+        default_config = {"create_backups": False}
+        with open(config_path, 'w') as f:
+            json.dump(default_config, f, indent=4)
+        return default_config
+    except Exception as e:
+        print(f"Error loading config: {e}")
+        return {"create_backups": False}
+
+def save_config(config):
+    """Save configuration to config.json file"""
+    config_path = Path(__file__).parent / "config.json"
+    try:
+        with open(config_path, 'w') as f:
+            json.dump(config, f, indent=4)
+        return True
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        return False
+
+def disable_qoder_auto_update():
+    """Disable Qoder auto update if configured to do so"""
+    try:
+        config = load_config()
+        if not config.get("disable_auto_update", False):
+            return  # Auto update disabling is not enabled
+        
+        home_dir = Path.home()
+        if sys.platform == "win32":
+            qoder_support_dir = home_dir / "AppData/Roaming/Qoder"
+        else:
+            qoder_support_dir = home_dir / "Library/Application Support/Qoder"
+        
+        settings_json_file = qoder_support_dir / "User/settings.json"
+        if settings_json_file.exists():
+            with open(settings_json_file, 'r', encoding='utf-8') as f:
+                settings_data = json.load(f)
+            
+            # Ensure app section exists
+            if 'app' not in settings_data:
+                settings_data['app'] = {}
+            
+            # Check if auto update is currently enabled and disable it
+            if settings_data['app'].get('configAdvancedAutoUpdate', True):
+                settings_data['app']['configAdvancedAutoUpdate'] = False
+                
+                with open(settings_json_file, 'w', encoding='utf-8') as f:
+                    json.dump(settings_data, f, indent=2, ensure_ascii=False)
+                
+                print("✅ Qoder auto update has been disabled")
+            
+    except Exception as e:
+        print(f"⚠️  Could not disable auto update: {e}")
+
+def display_menu(create_backups):
     """Display the simplified main menu with Rich styling"""
     console = Console()
     
@@ -869,20 +1050,55 @@ def display_menu():
     combined_text.append("\n")
     combined_text.append("📁 Version: ", style="bold white")
     combined_text.append("1.1", style="green")
-    
-    # Add line break and title
     combined_text.append("\n")
-    #combined_text.append("🚀 QODER RESET TOOL 🚀", style="bold magenta")
+    
+    # Add config status information
+    config = load_config()
+    combined_text.append("💾 Backups: ", style="bold white")
+    if config.get("create_backups", False):
+        combined_text.append("ENABLED", style="bold green")
+    else:
+        combined_text.append("DISABLED", style="bold red")
+    combined_text.append("\n")
+    
+    # Add auto update status from Qoder settings
+    combined_text.append("🔄 Auto Update: ", style="bold white")
+    try:
+        home_dir = Path.home()
+        if sys.platform == "win32":
+            qoder_support_dir = home_dir / "AppData/Roaming/Qoder"
+        else:
+            qoder_support_dir = home_dir / "Library/Application Support/Qoder"
+        
+        settings_json_file = qoder_support_dir / "User/settings.json"
+        if settings_json_file.exists():
+            with open(settings_json_file, 'r', encoding='utf-8') as f:
+                settings_data = json.load(f)
+            
+            if 'app' in settings_data and 'configAdvancedAutoUpdate' in settings_data['app']:
+                auto_update = settings_data['app']['configAdvancedAutoUpdate']
+                if auto_update:
+                    combined_text.append("ENABLED", style="bold green")
+                else:
+                    combined_text.append("DISABLED", style="bold red")
+            else:
+                combined_text.append("NOT FOUND", style="bold yellow")
+        else:
+            combined_text.append("NO FILE", style="bold yellow")
+    except Exception:
+        combined_text.append("ERROR", style="bold red")
+    
+    combined_text.append("\n")
     
     # Combined panel with same style as menu
     title_panel = Panel(
         Align.left(combined_text),
-        title="[bold blue]🚀 QODER RESET TOOL 🚀[/bold blue]",  # Added title
-        subtitle="[bold magenta]Dev by D3vin[/bold magenta]",  # Added subtitle at bottom
-        box=box.ROUNDED,  # Same as menu
-        border_style="bright_blue",  # Same color as menu
+        title="[bold blue]🚀 QODER RESET TOOL 🚀[/bold blue]",
+        subtitle="[bold magenta]Dev by D3vin[/bold magenta]",
+        box=box.ROUNDED,
+        border_style="bright_blue",
         padding=(0, 1),
-        width=70  # Same width as menu
+        width=70
     )
     
     console.print(title_panel)
@@ -893,8 +1109,8 @@ def display_menu():
         show_header=False,
         box=None,
         border_style="bright_blue",
-        expand=False,  # Don't expand to full width
-        width=65,  # Smaller fixed width
+        expand=False,
+        width=65,
         padding=(0, 2)
     )
     
@@ -906,11 +1122,16 @@ def display_menu():
     )
     
     table.add_row(
-        "[bold bright_yellow]🔄 2[/bold bright_yellow] [bold bright_yellow]RESET[/bold bright_yellow] - Complete advanced reset (All Features)"
+        "[bold bright_yellow]🧹 2[/bold bright_yellow] [bold bright_yellow]CLEANUP[/bold bright_yellow] - Delete detectable files"
+    )
+    
+    # Add new change machineid option
+    table.add_row(
+        "[bold bright_magenta]⚡ 3[/bold bright_magenta] [bold bright_magenta]CHANGE MACHINE_ID[/bold bright_magenta] - Qoder must be running"
     )
     
     table.add_row(
-        "[bold bright_red]🚪 3[/bold bright_red] [bold bright_red]EXIT[/bold bright_red] - Close application"
+        "[bold bright_red]🚪 4[/bold bright_red] [bold bright_red]EXIT[/bold bright_red] - Close application"
     )
     
     # Menu panel - with limited width
@@ -919,7 +1140,7 @@ def display_menu():
         title="[bold blue]📋 Menu[/bold blue]",
         border_style="bright_blue",
         padding=(0, 1),
-        width=70  # Smaller width
+        width=70
     )
     
     console.print(menu_panel)
@@ -936,31 +1157,37 @@ def signal_handler(signum, frame):
 
 def main():
     """Main function with simplified Rich menu system"""
-    checker = QoderStatusChecker()
+    # Load configuration
+    config = load_config()
+    create_backups = False  # Force disable backups
     console = Console()
+    
+    # Disable Qoder auto update if configured
+    disable_qoder_auto_update()
     
     # Setup signal handler for Ctrl+C
     signal.signal(signal.SIGINT, signal_handler)
     
     while True:
-        display_menu()
+        display_menu(create_backups)
         console.print()
         
         # Use Rich prompt for better input
         choice = Prompt.ask(
             "[bold bright_white]Choose option[/bold bright_white]",
-            choices=["1", "2", "3"],
+            choices=["1", "2", "3", "4"],
             default="1"
         )
         
         if choice == "1":
             # Status check
             console.print("\n[bold bright_green]🔍 Checking status...[/bold bright_green]\n")
+            checker = QoderStatusChecker(create_backups)
             checker.initialize_status_check()
             
         elif choice == "2":
-            # Reset with confirmation
-            console.print("\n[bold bright_yellow]⚠️  This will reset all Qoder identity data![/bold bright_yellow]")
+            # Cleanup detectable files with confirmation
+            console.print("\n[bold bright_yellow]⚠️  This will delete files that may be detected by anti-fraud systems![/bold bright_yellow]")
             confirm = Prompt.ask(
                 "[bold red]Continue?[/bold red]",
                 choices=["y", "n"],
@@ -968,17 +1195,24 @@ def main():
             )
             
             if confirm.lower() == "y":
-                console.print("\n[bold bright_red]🔄 Resetting...[/bold bright_red]\n")
-                checker.reset_all_data()
+                console.print("\n[bold bright_red]🧹 Cleaning up detectable files...[/bold bright_red]\n")
+                checker = QoderStatusChecker(create_backups)
+                checker.cleanup_detectable_files()
             else:
                 console.print("[yellow]Cancelled.[/yellow]")
                 
         elif choice == "3":
+            # Run change machineid
+            console.print("\n[bold bright_magenta]⚡ Starting machine ID change...[/bold bright_magenta]\n")
+            changer = MachineIdChanger()
+            changer.run_machine_id_change()
+                
+        elif choice == "4":
             # Exit
             graceful_exit(console)
         
         # Pause
-        if choice in ["1", "2"]:
+        if choice in ["1", "2", "3"]:
             console.print()
             Prompt.ask("[dim]Press Enter to continue...[/dim]", default="")
 
