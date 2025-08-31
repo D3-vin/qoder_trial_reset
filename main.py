@@ -13,6 +13,18 @@ import signal
 import time
 import ctypes
 
+# Fix Windows console encoding for Unicode support
+if sys.platform == "win32":
+    import os
+    os.system("chcp 65001 >nul")  # Switch to UTF-8 code page
+    # Also set environment variables for proper UTF-8 handling
+    os.environ['PYTHONIOENCODING'] = 'utf-8'
+    
+    # Configure stdout/stderr encoding
+    if hasattr(sys.stdout, 'reconfigure'):
+        sys.stdout.reconfigure(encoding='utf-8')
+        sys.stderr.reconfigure(encoding='utf-8')
+
 # Rich imports for beautiful UI
 from rich.console import Console
 from rich.panel import Panel
@@ -29,6 +41,40 @@ import pymem
 import pymem.process
 # Memory bypass imports
 from machine_id_changer import MachineIdChanger
+
+
+def safe_input(prompt="", choices=None, default=None):
+    """Safe input function that works in compiled executables"""
+    try:
+        # Try Rich prompt first
+        if choices:
+            return Prompt.ask(prompt, choices=choices, default=default)
+        else:
+            return Prompt.ask(prompt, default=default)
+    except (RuntimeError, OSError):
+        # Fallback to basic input for compiled executables
+        console = Console()
+        if choices:
+            console.print(f"{prompt} {choices} (default: {default}): ", end="")
+        else:
+            console.print(f"{prompt}: ", end="")
+        
+        try:
+            # Try direct input
+            user_input = input().strip()
+            if not user_input and default is not None:
+                return str(default)
+            if choices and user_input not in choices:
+                console.print(f"[red]Invalid choice. Using default: {default}[/red]")
+                return str(default) if default else choices[0]
+            return user_input if user_input else (str(default) if default else "")
+        except (EOFError, KeyboardInterrupt):
+            console.print(f"\n[yellow]Using default: {default}[/yellow]")
+            return str(default) if default else ""
+        except Exception:
+            # Last resort - return default
+            console.print(f"\n[red]Input error. Using default: {default}[/red]")
+            return str(default) if default else ""
 
 
 
@@ -1172,8 +1218,8 @@ def main():
         display_menu(create_backups)
         console.print()
         
-        # Use Rich prompt for better input
-        choice = Prompt.ask(
+        # Use safe input for better compatibility
+        choice = safe_input(
             "[bold bright_white]Choose option[/bold bright_white]",
             choices=["1", "2", "3", "4"],
             default="1"
@@ -1188,7 +1234,7 @@ def main():
         elif choice == "2":
             # Cleanup detectable files with confirmation
             console.print("\n[bold bright_yellow]⚠️  This will delete files that may be detected by anti-fraud systems![/bold bright_yellow]")
-            confirm = Prompt.ask(
+            confirm = safe_input(
                 "[bold red]Continue?[/bold red]",
                 choices=["y", "n"],
                 default="n"
@@ -1214,7 +1260,7 @@ def main():
         # Pause
         if choice in ["1", "2", "3"]:
             console.print()
-            Prompt.ask("[dim]Press Enter to continue...[/dim]", default="")
+            safe_input("[dim]Press Enter to continue...[/dim]", default="")
 
 if __name__ == "__main__":
     main()
