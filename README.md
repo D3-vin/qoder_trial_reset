@@ -1,4 +1,4 @@
-# 🚀 Advanced Qoder Reset Tool
+# 🚀 Advanced Qoder Reset Tool 
 
 > **🌐 Language**: [Русский](README_RUS.md) | **English**
 
@@ -17,6 +17,8 @@ A comprehensive command-line tool for cleaning Qoder application detectable file
 **✨ Important Note: After resetting Qoder, please use a fingerprint-protected browser for registration to avoid detection of duplicate registration due to browser cache or fingerprints. The author has been using it for 2 days after reset.**
 
 **Like Cursor and Augment, subsequent detection will become increasingly strict. No guarantee how long it will work - use it while you can.**
+
+## Version 0/1/21
 
 ## 📋 Table of Contents
 
