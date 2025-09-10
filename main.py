@@ -1006,6 +1006,27 @@ def save_config(config):
         print(f"Error saving config: {e}")
         return False
 
+def get_qoder_version():
+    """Get Qoder version from package.json file"""
+    try:
+        home_dir = Path.home()
+        if sys.platform == "win32":
+            package_json_path = home_dir / "AppData/Local/Programs/Qoder/resources/app/package.json"
+        else:
+            package_json_path = home_dir / "Library/Application Support/Qoder/resources/app/package.json"
+        
+        if package_json_path.exists():
+            with open(package_json_path, 'r', encoding='utf-8') as f:
+                package_data = json.load(f)
+            
+            version = package_data.get('version', 'Unknown')
+            return version
+        else:
+            return "Not Found"
+            
+    except Exception as e:
+        return f"Error: {e}"
+
 def disable_qoder_auto_update():
     """Disable Qoder auto update if configured to do so"""
     try:
@@ -1060,8 +1081,17 @@ def display_menu(create_backups):
     combined_text.append("📁 GitHub: ", style="bold white")
     combined_text.append("https://github.com/D3-vin", style="cyan")
     combined_text.append("\n")
-    combined_text.append("📁 Version: ", style="bold white")
+    combined_text.append("📁 Script Version: ", style="bold white")
     combined_text.append("1.3", style="green")
+    combined_text.append("\n")
+    
+    # Add Qoder version information
+    qoder_version = get_qoder_version()
+    combined_text.append("🚀 Qoder Version: ", style="bold white")
+    if qoder_version.startswith("Error:") or qoder_version == "Not Found":
+        combined_text.append(qoder_version, style="bold red")
+    else:
+        combined_text.append(qoder_version, style="bold green")
     combined_text.append("\n")
     
     # Add config status information
