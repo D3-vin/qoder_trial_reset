@@ -12,6 +12,7 @@ import random
 import signal
 import time
 import ctypes
+import sqlite3
 
 # Fix Windows console encoding for Unicode support
 if sys.platform == "win32":
@@ -977,6 +978,121 @@ class QoderStatusChecker:
         except Exception as e:
             self.log(f"   ❌ Hardware cleanup failed: {e}")
 
+    def move_chat_history(self):
+        """Move chat history by updating user_id in local.db database"""
+        self.log("Starting chat history move...")
+        
+        # Check if Qoder is running
+        #is_running, _ = self.check_qoder_running()
+        #if is_running:
+            #self.log("❌ Error: Qoder is running, please close it first", "red")
+            #return
+        
+        try:
+            home_dir = Path.home()
+            # Adjusting path for cross-platform compatibility
+            if sys.platform == "win32":
+                qoder_support_dir = home_dir / "AppData/Roaming/Qoder"
+            else:
+                qoder_support_dir = home_dir / "Library/Application Support/Qoder"
+            
+            # Path to the database file
+            db_path = qoder_support_dir / "SharedClientCache/cache/db/local.db"
+            
+            if not db_path.exists():
+                self.log(f"❌ Database file not found: {db_path}")
+                return
+            
+            self.log(f"📁 Database found: {db_path}")
+            
+            # Connect to database
+            conn = sqlite3.connect(str(db_path))
+            cursor = conn.cursor()
+            
+            try:
+                # Check if chat_session table exists
+                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='chat_session'")
+                if not cursor.fetchone():
+                    self.log("❌ Table 'chat_session' not found in database")
+                    return
+                
+                # Get table structure to check available columns
+                cursor.execute("PRAGMA table_info(chat_session)")
+                columns_info = cursor.fetchall()
+                column_names = [col[1] for col in columns_info]
+                
+                # Check if user_name column exists
+                has_user_name = 'user_name' in column_names
+                
+                # Get the last record with user_id and user_name (if exists)
+                if has_user_name:
+                    cursor.execute("SELECT user_id, user_name FROM chat_session ORDER BY rowid DESC LIMIT 1")
+                    result = cursor.fetchone()
+                    
+                    if not result:
+                        self.log("❌ No records found in chat_session table")
+                        return
+                    
+                    current_user_id, current_user_name = result
+                    self.log(f"📊 Last record found:")
+                    self.log(f"   User ID: {current_user_id}")
+                    self.log(f"   User Name: {current_user_name}")
+                else:
+                    # Fallback to just user_id if user_name column doesn't exist
+                    cursor.execute("SELECT user_id FROM chat_session ORDER BY rowid DESC LIMIT 1")
+                    result = cursor.fetchone()
+                    
+                    if not result:
+                        self.log("❌ No user_id found in chat_session table")
+                        return
+                    
+                    current_user_id = result[0]
+                    current_user_name = "N/A (column not found)"
+                    self.log(f"📊 Last record found:")
+                    self.log(f"   User ID: {current_user_id}")
+                    self.log(f"   User Name: {current_user_name}")
+                
+                # Ask for confirmation
+                self.log("\n" + "="*50)
+                self.log("⚠️  WARNING: Found user_id will be assigned to all records!")
+                self.log("="*50)
+                
+                # Use Rich prompt for confirmation
+                from rich.prompt import Confirm
+                confirm = Confirm.ask(
+                    "[bold yellow]Assign found user_id to all records?[/bold yellow]",
+                    default=False
+                )
+                
+                if not confirm:
+                    self.log("❌ Operation cancelled by user")
+                    return
+                
+                # Use the found user_id for all records (keep existing user_name)
+                self.log(f"\n🔄 Assigning found user_id to all records:")
+                self.log(f"   User ID: {current_user_id}")
+                self.log(f"   User Name: will remain unchanged")
+                
+                # Update all records with the found user_id only
+                cursor.execute("UPDATE chat_session SET user_id = ?", (current_user_id,))
+                
+                affected_rows = cursor.rowcount
+                
+                # Commit changes
+                conn.commit()
+                
+                self.log(f"✅ Successfully updated {affected_rows} rows in chat_session table")
+                self.log("🎉 All records now have the same user_id!")
+                
+            except sqlite3.Error as e:
+                self.log(f"❌ Database error: {e}")
+                conn.rollback()
+            finally:
+                conn.close()
+                
+        except Exception as e:
+            self.log(f"❌ Failed to move chat history: {e}")
+
 
 
 def load_config():
@@ -1082,7 +1198,7 @@ def display_menu(create_backups):
     combined_text.append("https://github.com/D3-vin", style="cyan")
     combined_text.append("\n")
     combined_text.append("📁 Script Version: ", style="bold white")
-    combined_text.append("1.3", style="green")
+    combined_text.append("1.23a", style="green")
     combined_text.append("\n")
     
     # Add Qoder version information
@@ -1102,6 +1218,8 @@ def display_menu(create_backups):
     else:
         combined_text.append("DISABLED", style="bold red")
     combined_text.append("\n")
+    
+    
     
     # Add auto update status from Qoder settings
     combined_text.append("🔄 Auto Update: ", style="bold white")
@@ -1131,7 +1249,14 @@ def display_menu(create_backups):
         combined_text.append("ERROR", style="bold red")
     
     combined_text.append("\n")
-    
+    # Add machine ID process status
+    from machine_id_changer import is_machine_id_running
+    combined_text.append("🆔 Machine ID: ", style="bold white")
+    if is_machine_id_running():
+        combined_text.append("RUNNING", style="bold green")
+    else:
+        combined_text.append("STOPPED", style="bold red")
+    combined_text.append("\n")
     # Combined panel with same style as menu
     title_panel = Panel(
         Align.left(combined_text),
@@ -1159,21 +1284,22 @@ def display_menu(create_backups):
     table.add_column("Menu Options", style="white", justify="left")
     
     # Simple menu options with numbers and descriptions combined
-    table.add_row(
-        "[bold bright_green]🔍 1[/bold bright_green] [bold bright_green]CHECK[/bold bright_green] - Comprehensive system status analysis"
-    )
+    #table.add_row("[bold bright_green]🔍 1[/bold bright_green] [bold bright_green]CHECK[/bold bright_green] - Comprehensive system status analysis")
     
-    table.add_row(
-        "[bold bright_yellow]🧹 2[/bold bright_yellow] [bold bright_yellow]CLEANUP[/bold bright_yellow] - Delete detectable files"
-    )
+    #table.add_row("[bold bright_yellow]🧹 2[/bold bright_yellow] [bold bright_yellow]CLEANUP[/bold bright_yellow] - Delete detectable files")
     
     # Add new change machineid option
     table.add_row(
-        "[bold bright_magenta]⚡ 3[/bold bright_magenta] [bold bright_magenta]CHANGE MACHINE_ID[/bold bright_magenta] - Qoder must be running"
+        "[bold bright_magenta]⚡ 3[/bold bright_magenta] [bold bright_magenta]CHANGE MACHINE_ID[/bold bright_magenta] - Qoder & Script must be running "
+    )
+    
+    # Add new move chat history option
+    table.add_row(
+        "[bold bright_cyan]💬 4[/bold bright_cyan] [bold bright_cyan]MOVE CHAT HISTORY[/bold bright_cyan] - Update user_id in database"
     )
     
     table.add_row(
-        "[bold bright_red]🚪 4[/bold bright_red] [bold bright_red]EXIT[/bold bright_red] - Close application"
+        "[bold bright_red]🚪 5[/bold bright_red] [bold bright_red]EXIT[/bold bright_red] - Close application"
     )
     
     # Menu panel - with limited width
@@ -1217,44 +1343,28 @@ def main():
         # Use Rich prompt for better input
         choice = Prompt.ask(
             "[bold bright_white]Choose option[/bold bright_white]",
-            choices=["1", "2", "3", "4"],
-            default="1"
+            choices=["3", "4", "5"],
+            default="3"
         )
         
-        if choice == "1":
-            # Status check
-            console.print("\n[bold bright_green]🔍 Checking status...[/bold bright_green]\n")
-            checker = QoderStatusChecker(create_backups)
-            checker.initialize_status_check()
-            
-        elif choice == "2":
-            # Cleanup detectable files with confirmation
-            console.print("\n[bold bright_yellow]⚠️  This will delete files that may be detected by anti-fraud systems![/bold bright_yellow]")
-            confirm = Prompt.ask(
-                "[bold red]Continue?[/bold red]",
-                choices=["y", "n"],
-                default="n"
-            )
-            
-            if confirm.lower() == "y":
-                console.print("\n[bold bright_red]🧹 Cleaning up detectable files...[/bold bright_red]\n")
-                checker = QoderStatusChecker(create_backups)
-                checker.cleanup_detectable_files()
-            else:
-                console.print("[yellow]Cancelled.[/yellow]")
-                
-        elif choice == "3":
+        if choice == "3":
             # Run change machineid
             console.print("\n[bold bright_magenta]⚡ Starting machine ID change...[/bold bright_magenta]\n")
             changer = MachineIdChanger()
             changer.run_machine_id_change()
                 
         elif choice == "4":
+            # Move chat history
+            console.print("\n[bold bright_cyan]💬 Starting chat history move...[/bold bright_cyan]\n")
+            checker = QoderStatusChecker(create_backups)
+            checker.move_chat_history()
+                
+        elif choice == "5":
             # Exit
             graceful_exit(console)
         
         # Pause
-        if choice in ["1", "2", "3"]:
+        if choice in ["3", "4"]:
             console.print()
             Prompt.ask("[dim]Press Enter to continue...[/dim]", default="")
 

@@ -18,7 +18,7 @@ A comprehensive command-line tool for cleaning Qoder application detectable file
 
 **Like Cursor and Augment, subsequent detection will become increasingly strict. No guarantee how long it will work - use it while you can.**
 
-## Version 0.1.23
+## Version 0.1.23a
 
 ## 📋 Table of Contents
 
