@@ -14,11 +14,9 @@ A comprehensive command-line tool for cleaning Qoder application detectable file
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-Educational%20Use-green)
 
-**✨ Important Note: After resetting Qoder, please use a fingerprint-protected browser for registration to avoid detection of duplicate registration due to browser cache or fingerprints. The author has been using it for 2 days after reset.**
-
 **Like Cursor and Augment, subsequent detection will become increasingly strict. No guarantee how long it will work - use it while you can.**
 
-## Version 0.1.23a
+## Version 0.2.1
 
 ## 📋 Table of Contents
 
