@@ -1198,7 +1198,7 @@ def display_menu(create_backups):
     combined_text.append("https://github.com/D3-vin", style="cyan")
     combined_text.append("\n")
     combined_text.append("📁 Script Version: ", style="bold white")
-    combined_text.append("1.23a", style="green")
+    combined_text.append("2.1", style="green")
     combined_text.append("\n")
     
     # Add Qoder version information
