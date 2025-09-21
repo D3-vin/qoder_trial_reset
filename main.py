@@ -1198,7 +1198,7 @@ def display_menu(create_backups):
     combined_text.append("https://github.com/D3-vin", style="cyan")
     combined_text.append("\n")
     combined_text.append("📁 Script Version: ", style="bold white")
-    combined_text.append("2.1", style="green")
+    combined_text.append("2.3", style="green")
     combined_text.append("\n")
     
     # Add Qoder version information
@@ -1288,14 +1288,19 @@ def display_menu(create_backups):
     
     #table.add_row("[bold bright_yellow]🧹 2[/bold bright_yellow] [bold bright_yellow]CLEANUP[/bold bright_yellow] - Delete detectable files")
     
-    # Add new change machineid option
-    table.add_row(
-        "[bold bright_magenta]⚡ 3[/bold bright_magenta] [bold bright_magenta]CHANGE MACHINE_ID[/bold bright_magenta] - Qoder & Script must be running "
-    )
+    # Add new change machineid option (temporarily hidden)
+    # table.add_row(
+    #     "[bold bright_magenta]⚡ 3[/bold bright_magenta] [bold bright_magenta]CHANGE MACHINE_ID[/bold bright_magenta] - Qoder & Script must be running "
+    # )
     
     # Add new move chat history option
     table.add_row(
-        "[bold bright_cyan]💬 4[/bold bright_cyan] [bold bright_cyan]MOVE CHAT HISTORY[/bold bright_cyan] - Update user_id in database"
+        "[bold bright_cyan]💬 3[/bold bright_cyan] [bold bright_cyan]MOVE CHAT HISTORY[/bold bright_cyan] - Update user_id in database"
+    )
+    
+    # Add registry update option
+    table.add_row(
+        "[bold bright_yellow]🔧 4[/bold bright_yellow] [bold bright_yellow]New Bypass[/bold bright_yellow] - new method (Admin required)"
     )
     
     table.add_row(
@@ -1348,16 +1353,39 @@ def main():
         )
         
         if choice == "3":
-            # Run change machineid
-            console.print("\n[bold bright_magenta]⚡ Starting machine ID change...[/bold bright_magenta]\n")
-            changer = MachineIdChanger()
-            changer.run_machine_id_change()
-                
-        elif choice == "4":
             # Move chat history
             console.print("\n[bold bright_cyan]💬 Starting chat history move...[/bold bright_cyan]\n")
             checker = QoderStatusChecker(create_backups)
             checker.move_chat_history()
+        
+        elif choice == "4":
+            # Update registry
+            console.print("\n[bold bright_yellow]🔧 Starting...[/bold bright_yellow]\n")
+            
+            # Check admin privileges
+            from machine_id_changer import is_admin
+            if not is_admin():
+                console.print("[bold red]❌ Administrator privileges required for this operation![/bold red]")
+                console.print("[bold yellow]⚠️ The program will restart with administrator privileges...[/bold yellow]")
+                
+                try:
+                    import ctypes
+                    import sys
+                    # Restart with admin privileges
+                    ctypes.windll.shell32.ShellExecuteW(
+                        None, "runas", sys.executable, " ".join(sys.argv), None, 1
+                    )
+                    console.print("[bold green]✅ Restarting with administrator privileges...[/bold green]")
+                    sys.exit(0)  # Exit current process
+                except Exception as e:
+                    console.print(f"[bold red]❌ Failed to restart with admin privileges: {e}[/bold red]")
+                    console.print("[bold yellow]⚠️ Please run the program manually as Administrator[/bold yellow]")
+            else:
+                from machine_id_changer import update_registry_ids
+                if update_registry_ids():
+                    console.print("[bold green]✅ Update completed successfully[/bold green]")
+                else:
+                    console.print("[bold red]❌ Update failed[/bold red]")
                 
         elif choice == "5":
             # Exit
