@@ -14,6 +14,23 @@ A comprehensive command-line tool for cleaning Qoder application detectable file
 ![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20macOS%20%7C%20Linux-lightgrey)
 ![License](https://img.shields.io/badge/License-Educational%20Use-green)
 
+
+❤️ Support the Project
+If you find this collection valuable and appreciate the effort involved in obtaining and sharing these insights, please consider supporting the project. Your contribution helps keep this resource updated and allows for further exploration.
+
+You can show your support via:
+
+Cryptocurrency:
+- **EVM:** 0xeba21af63e707ce84b76a87d0ba82140048c057e  (ETH,BNB,etc)
+- **TRON:** TEfECnyz5G1EkFrUqnbFcWLVdLvAgW9Raa
+- **TON:** UQCJ7KC2zxV_zKwLahaHf9jxy0vsWRcvQFie_FUBJW-9LcEW
+- **BTC:** bc1qdag98y5yahs6wf7rsfeh4cadsjfzmn5ngpjrcf
+- **SOL:** EwXXR4VqmWSNz1sjhZ8qcQ882i4URwAwhixSPEbDzyv6
+- **SUI:** 0x76da9b74c61508fbbd0b3e1989446e036b0622f252dd8d07c3fce759b239b47d
+
+
+🙏 Thank you for your support!
+
 **Like Cursor and Augment, subsequent detection will become increasingly strict. No guarantee how long it will work - use it while you can.**
 
 ## Version 0.2.3
